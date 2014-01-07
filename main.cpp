@@ -305,15 +305,35 @@ int main(int argc, char *argv[])
 
 	// Assume the image has been filtered correctly already if blurRadius
 	// is 0 (or not specified), otherwise blur the input file and
-	// lazily implement Gaussian blur by performing the blur 3 times with
-	// a radius 1/3 of the specified blur radius
+	// lazily implement Gaussian blur by performing the blur m times with
+	// a radius 1/m of the specified blur radius
 	sf::Image result;
+	unsigned int iterations = 3; // Brightness multiplier depends on iterations!
+	double bMult = 1.016;
+	if(iterations > blurRadius) iterations = blurRadius;
 	if(blurRadius == 0) result = inFile;
 	else
 	{
-		result = blur(inFile, blurRadius / 3);
-		result = blur(result, blurRadius / 3);
-		result = blur(result, blurRadius / 3);
+		result = blur(inFile, blurRadius / iterations);
+
+		for(unsigned int i = iterations; i > 1; --i)
+		{
+			result = blur(result, blurRadius / iterations);
+		}
+		// Apply the brightness modifier to more closely match a Gaussian
+		// It might have simply been easier to just use a Gaussian in the
+		// first place
+		for(unsigned int y = 0; y < result.getSize().y; ++y)
+		{
+			for(unsigned int x = 0; x < result.getSize().x; ++x)
+			{
+				sf::Color col = result.getPixel(x, y);
+				col.r *= bMult;
+				col.g *= bMult;
+				col.b *= bMult;
+				result.setPixel(x, y, col);
+			}
+		}
 	}
 
 	// Iterate through the centre points of each tile and use the colour
