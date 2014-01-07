@@ -65,7 +65,7 @@ sf::Image blur_1d(sf::Image& img, unsigned int r)
 			// Number of pixels tested (Used to compute average)
 			unsigned int n = 0;
 
-			for(int x2 = x-r; x2 <= x+r; ++x2)
+			for(int x2 = (int)(x-r); x2 <= (int)(x+r); ++x2)
 			{
 				// Skip if out of bounds
 				if(x2 < 0 || x2 >= img.getSize().x)
