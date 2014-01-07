@@ -236,11 +236,6 @@ int main(int argc, char *argv[])
 	sf::Image inFile;
 	inFile.loadFromFile(inFileName);
 
-	// Blur the input file
-	sf::Image result = blur(inFile, blurRadius);
-	result.saveToFile("OutputImage.png");
-	return 0;
-
 	// Open the data file
 	std::ifstream dataFile(dataFileName, std::ifstream::in);
 
@@ -308,7 +303,18 @@ int main(int argc, char *argv[])
 	// Output the map header to the map file
 	outFile << "border_size=1\n" << "usage=map\n" << std::endl;
 
-	// Assume the image has been filtered correctly already
+	// Assume the image has been filtered correctly already if blurRadius
+	// is 0 (or not specified), otherwise blur the input file and
+	// lazily implement Gaussian blur by performing the blur 3 times with
+	// a radius 1/3 of the specified blur radius
+	sf::Image result;
+	if(blurRadius == 0) result = inFile;
+	else
+	{
+		result = blur(inFile, blurRadius / 3);
+		result = blur(result, blurRadius / 3);
+		result = blur(result, blurRadius / 3);
+	}
 
 	// Iterate through the centre points of each tile and use the colour
 	// value at the point to determine which tile should be added, before
@@ -331,7 +337,7 @@ int main(int argc, char *argv[])
 			// If the tileMap contains a tile for the colour of the pixel,
 			// then add that tile to the map, otherwise add a default tile
 			bool found = false;
-			sf::Color col = inFile.getPixel(x, yTmp);
+			sf::Color col = result.getPixel(x, yTmp);
 			//~ std::cout << std::hex << (int)col.r << " " << (int)col.g << " " << (int)col.b;
 			for(auto tile : tileMap)
 			{
