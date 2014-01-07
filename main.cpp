@@ -28,21 +28,15 @@ class Tile
 	}
 };
 
-// Linearly blur the image with the specified radius. Slow, but more
-// useful than gaussian in this case as we can limit the radius exactly.
-sf::Image blur(sf::Image& img, unsigned int r, bool euclidean=false)
+// Linearly blur the image with the specified radius in one dimension,
+// then return its transpose. When called twice this efficiently blurs
+// the image in two dimensions
+sf::Image blur_1d(sf::Image& img, unsigned int r)
 {
-	// Create the temporary result image and set it to be the same size
-	// as the original. Read from the original, write to the result
 	sf::Image result;
-	result.create(img.getSize().x, img.getSize().y);
+	result.create(img.getSize().y, img.getSize().x);
 
-	// Take the mean of the pixel and it's neighbours within a radius
-	// r. Use Manhattan distance by default, but use Euclidean if specified
-	// Manhattan metric: s = |x| + |y|
-	// Euclidean metric: s = sqrt(x^2 + y^2)
-
-	// Iterate over each pixel and blur it
+	// Iterate over each pixel and blur it horizontally
 	for(unsigned int y = 0; y < img.getSize().y; ++y)
 	{
 		for(unsigned int x = 0; x < img.getSize().x; ++x)
@@ -51,51 +45,42 @@ sf::Image blur(sf::Image& img, unsigned int r, bool euclidean=false)
 			// Don't use sf::Color as we will easily exceed char bounds
 			unsigned int pixelSum[3] = { 0, 0, 0 };
 			// Number of pixels tested (Used to compute average)
-			unsigned int numPixels = 0;
+			unsigned int n = 0;
 
-			// Set of values satisfying each metric is bounded by a square
-			// width 2r+1 centred on (x,y), so only compute distance for
-			// the values within that range. If they are within the distance
-			// in the specified metric and are within the bounds of the image
-			// then add the pixel value to the running sum
-			// Too many nested for loops I know, forgive me
-			for(unsigned int y2 = y-r; y2 <= y+r; ++y2)
+			for(int x2 = x-r; x2 <= x+r; ++x2)
 			{
-				for(unsigned int x2 = x-r; x2 <= x+r; ++x2)
-				{
-					// If the sampled pixel is not within the image
-					// bounds then skip past it
-					if(!(x2 >= 0 && x2 < img.getSize().x && y2 >= 0 && y2 < img.getSize().y))
-						continue;
+				// Skip if out of bounds
+				if(x2 < 0 || x2 >= img.getSize().x)
+					continue;
 
-					// Is it within the metric boundary?
-					double dist = 0;
-					if(!euclidean) dist = abs(x2-x) + abs(y2-y);
-					else dist = sqrt((x2-x)*(x2-x)+(y2-y)*(y2-y));
-
-					if(dist <= r)
-					{
-						// Add pixel to running sum
-						sf::Color pixelCol = img.getPixel(x2, y2);
-						pixelSum[0] += pixelCol.r;
-						pixelSum[1] += pixelCol.g;
-						pixelSum[2] += pixelCol.b;
-						// Incremement number of pixels checked
-						++numPixels;
-					}
-				}
+				// Add pixel to running sum
+				sf::Color pixelCol = img.getPixel(x2, y);
+				pixelSum[0] += pixelCol.r;
+				pixelSum[1] += pixelCol.g;
+				pixelSum[2] += pixelCol.b;
+				++n;
 			}
-			// Compute pixel average and then assign that value to the
-			// corresponding pixel in the final image
-			// Cap numPixels between (0,oo) so as to prevent division
-			// by zero
-			if(numPixels == 0) numPixels = 1;
-			sf::Color finalCol(pixelSum[0] / numPixels, pixelSum[1] / numPixels, pixelSum[2] / numPixels);
-			
-			result.setPixel(x, y, finalCol);
+
+			// Save blurred pixel value to transposed position in the
+			// result image
+			if(n == 0) n = 1;
+			sf::Color pixelCol(pixelSum[0] / n, pixelSum[1] / n, pixelSum[2] / n);
+			result.setPixel(y, x, pixelCol);
 		}
 	}
+
 	return result;
+}
+
+// Linearly blur the image with the specified radius. Slow, but more
+// useful than gaussian in this case as we can limit the radius exactly.
+sf::Image blur(sf::Image& img, unsigned int r)
+{
+	// Blur horizontally
+	sf::Image tmp = blur_1d(img, r);
+
+	// Blur vertically
+	return blur_1d(tmp, r);
 }
 
 void printHelp()
@@ -218,7 +203,7 @@ int main(int argc, char *argv[])
 	inFile.loadFromFile(inFileName);
 
 	// Blur the input file
-	sf::Image result = blur(inFile, 16, false);
+	sf::Image result = blur(inFile, 16);
 	result.saveToFile("OutputImage.png");
 	return 0;
 
