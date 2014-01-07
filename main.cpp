@@ -92,6 +92,7 @@ void printHelp()
 	std::cerr << "  -t\tspecify tile width and height. Default 32 34\n";
 	std::cerr << "  -i\tspecify initial tile offset. Default 26 23\n";
 	std::cerr << "  -m\ttop-left tile is a major (upper) tile not a minor\n";
+	std::cerr << "  -b\tspecify blur radius. Default prefiltered\n";
 	std::cerr << "  -h\tshow this help and exit\n\n";
 	std::cerr << "Examples:\n";
 	std::cerr << "  hex-to-wesnoth map.png -x 16 17 -o output.map\t";
@@ -113,6 +114,9 @@ int main(int argc, char *argv[])
 
 	unsigned int initialOffsetX = 26;
 	unsigned int initialOffsetY = 23;
+
+	// Radius of the blur to apply. 0 => pre-filtered image
+	unsigned int blurRadius = 0;
 
 	// First tile is an upper one and not a lower (Wesnoth requires lower)
 	bool majorTileStart = false;
@@ -154,6 +158,7 @@ int main(int argc, char *argv[])
 				}
 				tileOffsetX = std::stoi(argv[i+1]);
 				tileOffsetY = std::stoi(argv[i+2]);
+				i += 2;
 			}
 			// Initial tile offset x and y
 			else if((std::string)argv[i] == "-i")
@@ -165,6 +170,17 @@ int main(int argc, char *argv[])
 				}
 				initialOffsetX = std::stoi(argv[i+1]);
 				initialOffsetY = std::stoi(argv[i+2]);
+				i += 2;
+			}
+			// Blur radius
+			else if((std::string)argv[i] == "-b")
+			{
+				if(i+1 >= argc || argv[i+1][0] == '-')
+				{
+					std::cerr << "-b requires an argument\n";
+					return 1;
+				}
+				blurRadius = std::stoi(argv[++i]);
 			}
 			// Top left tile is a major one (Wesnoth requires minor)
 			else if((std::string)argv[i] == "-m")
@@ -203,7 +219,7 @@ int main(int argc, char *argv[])
 	inFile.loadFromFile(inFileName);
 
 	// Blur the input file
-	sf::Image result = blur(inFile, 16);
+	sf::Image result = blur(inFile, blurRadius);
 	result.saveToFile("OutputImage.png");
 	return 0;
 
