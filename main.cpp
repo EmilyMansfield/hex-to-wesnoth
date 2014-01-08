@@ -22,6 +22,31 @@
 #include <string>
 #include <cmath>
 #include <utility>
+#include <cstdlib>
+
+std::string randString(unsigned int len)
+{
+	static std::string alphanum =
+		"abcdefghijklmnopqrstuvwxyz"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"1234567890";
+
+	std::string str;
+
+	while(len-- > 0)
+	{
+		str += alphanum[rand() % alphanum.length()];
+	}
+
+	return str;
+}
+
+std::string incrementalString()
+{
+	static unsigned int i = 0;
+
+	return std::to_string(i++);
+}
 
 void printHelp()
 {
@@ -57,7 +82,10 @@ bool image_compare(sf::Image& a, sf::Image& b)
 			// Compare rgb, return false if discrepancy
 			if( a.getPixel(x, y).r != b.getPixel(x, y).r ||
 				a.getPixel(x, y).g != b.getPixel(x, y).g ||
-				a.getPixel(x, y).b != b.getPixel(x, y).b) return false;
+				a.getPixel(x, y).b != b.getPixel(x, y).b)
+			{
+				return false;
+			}
 		}
 	}
 
@@ -76,8 +104,12 @@ int main(int argc, char *argv[])
 	unsigned int tileOffsetX = 32;
 	unsigned int tileOffsetY = 34;
 
-	unsigned int initialOffsetX = 26;
-	unsigned int initialOffsetY = 23;
+	unsigned int initialOffsetX = 5;
+	unsigned int initialOffsetY = 6;
+
+	// Tile dimensions
+	unsigned int tileWidth = 43;
+	unsigned int tileHeight = 35;
 
 	// First tile is an upper one and not a lower (Wesnoth requires lower)
 	bool majorTileStart = false;
@@ -197,6 +229,8 @@ int main(int argc, char *argv[])
 	// Output the map header to the map file
 	outFile << "border_size=1\n" << "usage=map\n" << std::endl;
 
+	srand(1);
+
 	// Iterate over the file in step sizes equal to the tile dimensions
 	// and compare each pixel that is not transparent (alpha = 0) in that
 	// square to each tile in turn. If all pixels are equal, then the tiles
@@ -219,9 +253,11 @@ int main(int argc, char *argv[])
 
 			// Create the small subimage to compare to
 			sf::Image subimage;
-			subimage.copy(inFile, 0, 0, sf::IntRect(x, y, tileOffsetX, tileOffsetY));
+			subimage.create(tileWidth, tileHeight);
+			subimage.copy(inFile, 0, 0, sf::IntRect(x, yTmp, tileWidth, tileHeight));
+			subimage.saveToFile("tiles/" + incrementalString() + ".png");
 
-			// Iterate over every tile in the tile map and compare to the
+			// Iterate over every tile in the tile map and compare it to the
 			// subimage
 			bool found = false;
 			for(auto tile : tileMap)
@@ -231,6 +267,7 @@ int main(int argc, char *argv[])
 				if(found = image_compare(tile.first, subimage))
 				{
 					outFile << tile.second;
+					break;
 				}
 			}
 			if(!found) outFile << defaultTile;
