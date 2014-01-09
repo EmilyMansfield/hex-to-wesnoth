@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
 		{
 			// Adjust for hexagonal minor/major tiling
 			unsigned int yTmp = y;
-			if(((x - initialOffsetX) / tileOffsetX) % 2 == 0)
+			if(((x - initialOffsetX) / tileOffsetX) % 2 == (int)majorTileStart)
 			{
 				yTmp += tileOffsetY / 2;
 			}
