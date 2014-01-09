@@ -65,10 +65,19 @@ void printHelp()
 	return;
 }
 
+// Perform an RGB colour comparison with a threshold value
+bool color_compare(sf::Color a, sf::Color b, int t)
+{
+	return (abs(a.r-b.r) < t && abs(a.g-b.g) < t && abs(a.b-b.b) < t);
+}
+
 // Return true if the images are equal, only comparing non-transparent
 // pixels in a to those in b
 bool image_compare(sf::Image& a, sf::Image& b)
 {
+	// Colour comparison threshold
+	int threshold = 3;
+
 	// If the images are not the same size then return false, they
 	// cannot be equal to each other
 	if(a.getSize() != b.getSize()) return false;
@@ -80,9 +89,7 @@ bool image_compare(sf::Image& a, sf::Image& b)
 			// Ignore non-opaque alpha values
 			if(a.getPixel(x, y).a != 0xff) continue;
 			// Compare rgb, return false if discrepancy
-			if( a.getPixel(x, y).r != b.getPixel(x, y).r ||
-				a.getPixel(x, y).g != b.getPixel(x, y).g ||
-				a.getPixel(x, y).b != b.getPixel(x, y).b)
+			if(!color_compare(a.getPixel(x,y), b.getPixel(x,y), threshold))
 			{
 				return false;
 			}
@@ -232,7 +239,7 @@ int main(int argc, char *argv[])
 	srand(1);
 
 	// Iterate over the file in step sizes equal to the tile dimensions
-	// and compare each pixel that is not transparent (alpha = 0) in that
+	// and compare each pixel that is not transparent (alpha != 255) in that
 	// square to each tile in turn. If all pixels are equal, then the tiles
 	// match and the terrain code is outputted to the file. Otherwise move
 	// on to the next tile
@@ -246,6 +253,7 @@ int main(int argc, char *argv[])
 			{
 				yTmp += tileOffsetY / 2;
 			}
+			if(yTmp + tileOffsetY > inFile.getSize().y) continue;
 			if(x != initialOffsetX)
 			{
 				outFile << ", ";
@@ -255,7 +263,7 @@ int main(int argc, char *argv[])
 			sf::Image subimage;
 			subimage.create(tileWidth, tileHeight);
 			subimage.copy(inFile, 0, 0, sf::IntRect(x, yTmp, tileWidth, tileHeight));
-			subimage.saveToFile("tiles/" + incrementalString() + ".png");
+			//~ subimage.saveToFile("tiles/" + incrementalString() + ".png");
 
 			// Iterate over every tile in the tile map and compare it to the
 			// subimage
@@ -277,6 +285,6 @@ int main(int argc, char *argv[])
 
 	// Close the map file
 	outFile.close();
-	
+
 	return 0;
 }
